@@ -1,0 +1,49 @@
+version: "3"
+services:
+# ************** mariadb image **************
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb
+    restart: always
+    env_file: .env
+    volumes:
+      - volmysql:/var/lib/mysql
+    networks:
+      - mynet
+
+
+# ************** wordpress image **************
+  wordpress:
+    container_name: wordpress
+    depends_on:
+      - mariadb
+    build: ./requirements/wordpress
+    restart: always 
+    env_file: .env
+    volumes:
+      - volwordpress:/var/www/html
+    networks:
+      - mynet
+
+# ************** nginx image **************
+
+  nginx:
+    container_name: nginx
+    depends_on:
+      - wordpress
+    build: ./requirements/nginx
+    restart: always 
+    env_file: .env
+    ports:
+      - "443:443"
+    volumes:
+      - volwordpress:/var/www/html
+    networks:
+      - mynet
+
+
+volumes:
+    volmysql: {}
+    volwordpress: {}
+networks:
+    mynet: {}
