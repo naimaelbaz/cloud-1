@@ -1,10 +1,12 @@
 #!/bin/bash
 service mariadb start
 
-# Wait for MariaDB
 until mysqladmin ping --silent; do sleep 1; done
 
-# Create database and user
+# 👇 ADD THIS - Secure the root account
+mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';"
+
+# Now create database and user
 mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
 mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
 mysql -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'%';"
