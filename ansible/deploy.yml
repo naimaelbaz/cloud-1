@@ -1,5 +1,5 @@
 ---
-- name: Deploy Inception to AWS
+- name: Deploy Inception to Multiple Cloud Servers
   hosts: cloud_server
   become: yes
   
@@ -60,12 +60,14 @@
         owner: ubuntu
         group: ubuntu
     
-    - name: Copy .env file
-      copy:
-        src: ../srcs/.env
+    # KEY CHANGE - use 'template' module to process .env.j2
+    - name: Generate .env file with correct server IP
+      template:
+        src: ../srcs/.env.j2
         dest: /home/ubuntu/inception/.env
         owner: ubuntu
         group: ubuntu
+        mode: '0600'
     
     - name: Copy requirements directory
       copy:
@@ -105,3 +107,7 @@
         name: inception
         enabled: yes
         daemon_reload: yes
+    
+    - name: Display deployment info
+      debug:
+        msg: "WordPress deployed to https://{{ ansible_host }}"

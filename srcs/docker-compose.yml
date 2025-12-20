@@ -25,13 +25,16 @@ services:
     networks:
       - mynet
 
-# ************** nginx image **************
 
+# ************** nginx image **************
   nginx:
     container_name: nginx
     depends_on:
       - wordpress
-    build: ./requirements/nginx
+    build:
+      context: ./requirements/nginx
+      args:
+        SERVER_IP: ${SERVER_IP}
     restart: always 
     env_file: .env
     ports:
@@ -40,7 +43,6 @@ services:
       - volwordpress:/var/www/html
     networks:
       - mynet
-
 
 volumes:
     volmysql: {}

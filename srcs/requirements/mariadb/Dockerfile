@@ -3,11 +3,10 @@ FROM debian:bullseye
 RUN apt update && apt install -y mariadb-server
 
 COPY conf/my.cnf /etc/mysql/my.cnf
+COPY tools/confMariadb.sh /usr/local/bin/confMariadb.sh
 
-COPY tools/confMariadb.sh /docker-entrypoint-initdb.d/
-
-RUN ["bash", "/docker-entrypoint-initdb.d/confMariadb.sh"]
+RUN chmod +x /usr/local/bin/confMariadb.sh
 
 EXPOSE 3306
 
-CMD ["mysqld_safe"]
+CMD ["/bin/bash", "-c", "/usr/local/bin/confMariadb.sh && exec mysqld_safe"]

@@ -103,9 +103,6 @@ WP_ADMIN_EMAIL=your_email@example.com
 # Domain/IP
 HOST=https://YOUR_SERVER_IP
 
-# Optional: API keys for additional services
-API_KEY=your_api_key
-```
 
 ## 🚀 Deployment
 
