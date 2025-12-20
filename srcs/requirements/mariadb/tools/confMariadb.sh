@@ -3,8 +3,7 @@ service mariadb start
 
 until mysqladmin ping --silent; do sleep 1; done
 
-# 👇 ADD THIS - Secure the root account
-mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';"
+
 
 # Now create database and user
 mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
