@@ -1,0 +1,192 @@
+---
+
+- name: Create DigitalOcean Droplet
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  vars:
+    do_token: "{{ lookup('env', 'DO_API_TOKEN') }}" # Gets the value from your environment variable
+    droplet_name: "inception-server"
+    droplet_region: "lon1"
+    droplet_size: "s-1vcpu-1gb"
+    droplet_image: "ubuntu-22-04-x64"
+    ssh_key_name: "cloud1-key"
+
+  tasks:
+    - name: Check if DO_API_TOKEN is set
+      fail: # Ansible module that stops execution with an error
+        msg: "Please set DO_API_TOKEN environment variable: export DO_API_TOKEN='your_token'"
+      when: do_token == "" # Conditional: only run this if do_token is empty
+    
+    - name: Create SSH key pair if it doesn't exist
+      openssh_keypair: # Ansible module for creating SSH keys
+        path: "~/.ssh/{{ ssh_key_name }}"
+        type: rsa
+        size: 4096
+        state: present
+        force: no # Don't overwrite if key already exists
+      register: ssh_key_result
+    
+    - name: Read public SSH key
+      slurp: # Ansible module that reads a file and encodes it in base64
+        src: "~/.ssh/{{ ssh_key_name }}.pub"
+      register: ssh_pub_key
+    
+    - name: Add SSH key to DigitalOcean
+      community.digitalocean.digital_ocean_sshkey:
+        oauth_token: "{{ do_token }}"
+        name: "{{ ssh_key_name }}"
+        ssh_pub_key: "{{ ssh_pub_key['content'] | b64decode }}"
+        state: present
+      register: do_ssh_key # Save the key ID for next step
+    
+    - name: Create DigitalOcean Droplet
+      community.digitalocean.digital_ocean_droplet:
+        oauth_token: "{{ do_token }}"
+        name: "{{ droplet_name }}"
+        size: "{{ droplet_size }}"
+        region: "{{ droplet_region }}"
+        image: "{{ droplet_image }}"
+        wait_timeout: 500
+        unique_name: yes
+        ssh_keys:
+          - "{{ do_ssh_key.data.ssh_key.id }}"
+        state: present
+      register: droplet
+
+    - name: Extract public IP address
+      set_fact:
+        droplet_public_ip: "{{ droplet.data.droplet.networks.v4 | selectattr('type', 'equalto', 'public') | map(attribute='ip_address') | first }}"
+
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ droplet_public_ip }}"
+        port: 22
+        delay: 20
+        timeout: 300
+        state: started
+    
+    - name: Add new droplet to inventory for this playbook
+      add_host: # Ansible module to add a host to the in-memory inventory
+        name: "{{ droplet_public_ip }}"
+        groups: cloud_server
+        ansible_user: root
+        ansible_ssh_private_key_file: "~/.ssh/{{ ssh_key_name }}"
+    
+    - name: Wait additional time for droplet to fully initialize
+      pause:
+        seconds: 60
+        prompt: "Waiting for droplet to fully initialize..."
+
+
+- name: Deploy Inception to Multiple Cloud Servers
+  hosts: cloud_server
+  become: yes
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+        state: present
+    
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+    
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+    
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+    
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Create inception directory
+      file:
+        path: /home/ubuntu/inception
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+    
+    - name: Copy docker-compose.yml
+      copy:
+        src: ../srcs/docker-compose.yml
+        dest: /home/ubuntu/inception/docker-compose.yml
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Generate .env file with correct server IP
+      template:
+        src: ../srcs/.env.j2
+        dest: /home/ubuntu/inception/.env
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+    
+    - name: Copy requirements directory
+      copy:
+        src: ../srcs/requirements/
+        dest: /home/ubuntu/inception/requirements/
+        owner: ubuntu
+        group: ubuntu
+    
+    - name: Deploy containers
+      shell: |
+        cd /home/ubuntu/inception
+        docker-compose up -d --build
+    
+    - name: Create systemd service for auto-restart
+      copy:
+        content: |
+          [Unit]
+          Description=Inception Docker Compose
+          Requires=docker.service
+          After=docker.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu/inception
+          ExecStart=/usr/local/bin/docker-compose up -d
+          ExecStop=/usr/local/bin/docker-compose down
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/inception.service
+    
+    - name: Enable inception service
+      systemd:
+        name: inception
+        enabled: yes  #systemctl enable inception => starts on boot
+        daemon_reload: yes #systemctl daemon-reload => read all service files again
+    
+    - name: Display deployment info
+      debug:
+        msg: "WordPress deployed to https://{{ ansible_host }}"

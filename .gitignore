@@ -1,2 +1,20 @@
+# Environment variables
+.env
 srcs/.env
 srcs/.env.j2
+
+
+# Secrets
+secrets/
+
+# Local data
+data/
+*/data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
