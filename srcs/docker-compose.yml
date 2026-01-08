@@ -7,7 +7,7 @@ services:
     restart: always
     env_file: .env
     volumes:
-      - volmysql:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     networks:
       - mynet
 
@@ -21,7 +21,7 @@ services:
     restart: always 
     env_file: .env
     volumes:
-      - volwordpress:/var/www/html
+      - wordpress_data:/var/www/html
     networks:
       - mynet
 
@@ -39,13 +39,29 @@ services:
     env_file: .env
     ports:
       - "443:443"
+      - "80:80"
     volumes:
-      - volwordpress:/var/www/html
+     - wordpress_data:/var/www/html
     networks:
       - mynet
 
+# volumes:
+#     volmysql: {}
+#     volwordpress: {}
+
 volumes:
-    volmysql: {}
-    volwordpress: {}
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ubuntu/data/mariadb_data
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ubuntu/data/wordpress_data
+
 networks:
     mynet: {}

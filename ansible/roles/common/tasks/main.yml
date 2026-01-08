@@ -1,0 +1,52 @@
+- name: Create inception directory
+  file:
+    path: /home/ubuntu/inception
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create requirements directory
+  file:
+    path: /home/ubuntu/inception/requirements
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+
+- name: Create data directory
+  file:
+    path: /home/ubuntu/data
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create MariaDB data directory
+  file:
+    path: /home/ubuntu/data/mariadb_data
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Create WordPress data directory
+  file:
+    path: /home/ubuntu/data/wordpress_data
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Copy docker-compose.yml
+  copy:
+    src: ../srcs/docker-compose.yml
+    dest: /home/ubuntu/inception/docker-compose.yml
+    owner: ubuntu
+    group: ubuntu
+
+- name: Generate .env file with correct server IP
+  template:
+    src: ../srcs/.env.j2
+    dest: /home/ubuntu/inception/.env
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'

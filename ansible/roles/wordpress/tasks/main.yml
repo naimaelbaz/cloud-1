@@ -1,0 +1,35 @@
+---
+
+- name: Create wordpress directory
+  file:
+    path: /home/ubuntu/inception/requirements/wordpress
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy WordPress Dockerfile
+  copy:
+    src: ../srcs/requirements/wordpress/Dockerfile
+    dest: /home/ubuntu/inception/requirements/wordpress/Dockerfile
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create wordpress tools directory
+  file:
+    path: /home/ubuntu/inception/requirements/wordpress/tools
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy WordPress setup script
+  copy:
+    src: ../srcs/requirements/wordpress/tools/script.sh
+    dest: /home/ubuntu/inception/requirements/wordpress/tools/script.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Build and start WordPress container
+  shell: |
+    cd /home/ubuntu/inception
+    docker-compose up -d --build wordpress

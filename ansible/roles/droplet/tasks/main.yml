@@ -1,0 +1,64 @@
+
+- name: Extract public IP address
+  set_fact: # Creates a new Ansible variable
+    do_token: "{{ lookup('env', 'DO_API_TOKEN') }}"
+
+- name: Check if DO_API_TOKEN is set
+  fail: # Ansible module that stops execution with an error
+    msg: "Please set DO_API_TOKEN environment variable: export DO_API_TOKEN='your_token'"
+  when: do_token == "" # Conditional: only run this if do_token is empty
+
+- name: Create SSH key pair if it doesn't exist
+  openssh_keypair:
+    path: "~/.ssh/cloud1-key"
+    type: rsa
+    size: 4096
+    state: present
+    force: no
+  register: ssh_key_result
+
+- name: Add SSH key to DigitalOcean
+  community.digitalocean.digital_ocean_sshkey:
+    oauth_token: "{{ do_token }}"
+    name: "cloud1-key"
+    ssh_pub_key: "{{ ssh_key_result.public_key }}"
+    state: present
+  register: do_ssh_key
+
+- name: Create DigitalOcean Droplet
+  community.digitalocean.digital_ocean_droplet:
+    oauth_token: "{{ do_token }}"
+    name: "inception-server"
+    size: "s-1vcpu-1gb"
+    region: "lon1"
+    image: "ubuntu-22-04-x64"
+    wait_timeout: 500
+    unique_name: yes
+    ssh_keys:
+      - "{{ do_ssh_key.data.ssh_key.id }}"
+    state: present
+  register: droplet
+
+- name: Extract public IP address
+  set_fact: # Creates a new Ansible variable
+    droplet_public_ip: "{{ droplet.data.droplet.networks.v4 | selectattr('type', 'equalto', 'public') | map(attribute='ip_address') | first }}"
+
+- name: Wait for SSH to be available
+  wait_for:
+    host: "{{ droplet_public_ip }}"
+    port: 22
+    delay: 20
+    timeout: 300
+    state: started
+
+- name: Add new droplet to inventory for this playbook
+  add_host: # Ansible module to add a host to the in-memory inventory
+    name: "{{ droplet_public_ip }}"
+    groups: cloud_server
+    ansible_user: root
+    ansible_ssh_private_key_file: "~/.ssh/cloud1-key"
+
+- name: Wait additional time for droplet to fully initialize
+  pause:
+    seconds: 60
+    prompt: "Waiting for droplet to fully initialize..."

@@ -1,0 +1,34 @@
+---
+
+- name: Create nginx directory
+  file:
+    path: /home/ubuntu/inception/requirements/nginx
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy Nginx Dockerfile
+  copy:
+    src: ../srcs/requirements/nginx/Dockerfile
+    dest: /home/ubuntu/inception/requirements/nginx/Dockerfile
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create nginx conf directory
+  file:
+    path: /home/ubuntu/inception/requirements/nginx/conf
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy Nginx server configuration
+  copy:
+    src: ../srcs/requirements/nginx/conf/serverConfig.conf
+    dest: /home/ubuntu/inception/requirements/nginx/conf/serverConfig.conf
+    owner: ubuntu
+    group: ubuntu
+
+- name: Build and start Nginx container
+  shell: |
+    cd /home/ubuntu/inception
+    docker-compose up -d --build nginx

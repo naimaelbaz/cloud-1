@@ -1,0 +1,50 @@
+
+---
+
+- name: Create mariadb directory
+  file:
+    path: /home/ubuntu/inception/requirements/mariadb
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy MariaDB Dockerfile
+  copy:
+    src: ../srcs/requirements/mariadb/Dockerfile
+    dest: /home/ubuntu/inception/requirements/mariadb/Dockerfile
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create mariadb conf directory
+  file:
+    path: /home/ubuntu/inception/requirements/mariadb/conf
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy MariaDB configuration
+  copy:
+    src: ../srcs/requirements/mariadb/conf/my.cnf
+    dest: /home/ubuntu/inception/requirements/mariadb/conf/my.cnf
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create mariadb tools directory
+  file:
+    path: /home/ubuntu/inception/requirements/mariadb/tools
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy MariaDB configuration script
+  copy:
+    src: ../srcs/requirements/mariadb/tools/confMariadb.sh
+    dest: /home/ubuntu/inception/requirements/mariadb/tools/confMariadb.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Build and start MariaDB container
+  shell: |
+    cd /home/ubuntu/inception
+    docker-compose up -d --build mariadb
